@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 
 const app = express();
 
-const FILE_PATH = 'data/recipea-data.json';
+const FilePath = "/Users/staysha/Documents/dev/recipea-web-server-lab/data/recipe-data.json";
 
 app.use(express.json());
 
@@ -12,53 +12,35 @@ app.listen(3000, () => {
     console.log("Our hello user app is now listening on http://localhost:3000");
   });
 
-let recipes = [];
-
-async function loadRecipes() {
-  try {
-    const data = await fs.readFile(FILE_PATH, 'utf8');
-    recipes = JSON.parse(data);
-  } catch (error) {
-    console.error('Failed to load recipes:', error);
-  }
-}
-
-async function saveRecipes() {
-    try {
-      await fs.writeFile(FILE_PATH, JSON.stringify(recipes, null, 2));
-      console.log('Recipes saved successfully');
-    } catch (error) {
-      console.error('Failed to save recipes:', error);
-    }
-  }
+  const getAllRecipes = async () => {
+    return JSON.parse(await fs.readFile(FilePath, "utf8"));
+  };
   
-
-app.get('/find-recipes', (req, res) => {
-    res.json(recipes);
-});
-
-app.get('/find-recipe/:id', (req, res) => {
-  const recipeId = parseInt(req.params.id);
-  const recipe = recipes.find((r) => r.id === recipeId);
-
-  if (recipe) {
-    res.json(recipe);
-  } else {
-    res.status(404).send('Recipe not found');
-  }
-});
-
-app.delete('/trash-recipe/:id', (req, res) => {
-    const recipeId = parseInt(req.params.id);
+  const getRecipe = async (id) => {
+    const data = await fs.readFile(FilePath, "utf8");
+    const recipes = JSON.parse(data);
+    return recipes.find((recipe) => recipe.id === id);
+  };
   
-    if (recipeId >= 0 && recipeId <= recipes.length - 1) {
-      const deletedRecipe = recipes.splice(recipeId, 1);
-      saveRecipes();
-      res.json(deletedRecipe);
-    } else {
-      res.status(404).send('Recipe not found');
-    }
+  const deleteRecipe = async (id) => {
+    const data = await fs.readFile(FilePath, "utf8");
+    const recipes = JSON.parse(data).filter((recipe) => recipe.id !== id);
+    const jsonVersion = JSON.stringify(recipes, null, 2);
+    await fs.writeFile(FilePath, jsonVersion, "utf8");
+  };
+  
+  
+  app.get("/read-all-recipes", async (req, res) => {
+    const recipes = await getAllRecipes();
+    res.send(JSON.stringify(recipes, null, 2));
   });
   
-
-loadRecipes();
+  app.get("/read-recipe/:id", async (req, res) => {
+    const recipes = await getRecipe(Number(req.params.id));
+    res.send(JSON.stringify(recipes));
+  });
+  
+  app.get("/delete-recipe/:id", async (req, res) => {
+    await deleteRecipe(Number(req.params.id));
+    res.send("Successfully deleted recipe.");
+  });
